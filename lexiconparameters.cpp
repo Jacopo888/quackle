@@ -203,8 +203,11 @@ void LexiconParameters::loadGaddag(const string &filename)
 	}
 
 	char versionByte = file.get();
-	if (versionByte < m_interpreter->versionNumber())
-		return;
+	// Guard against null m_interpreter when loading GADDAG without a DAWG
+	if (m_interpreter != NULL) {
+		if (versionByte < m_interpreter->versionNumber())
+			return;
+	}
 	file.seekg(0, ios_base::end);
 	m_gaddag = new unsigned char[file.tellg()];
 	file.seekg(0, ios_base::beg);
