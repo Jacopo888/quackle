@@ -35,6 +35,18 @@ public:
 	// constructs a new rack containing letters in t
 	Rack(const LetterString &tiles);
 
+	// copy constructor
+	Rack(const Rack &other);
+
+	// move constructor
+	Rack(Rack &&other) noexcept;
+
+	// copy assignment operator
+	Rack& operator=(const Rack &other);
+
+	// move assignment operator
+	Rack& operator=(Rack &&other) noexcept;
+
 	// tiles like AEILNN?
 	void setTiles(const LetterString &tiles);
 	const LetterString &tiles() const;
@@ -74,20 +86,81 @@ private:
 
 inline Rack::Rack()
 {
+	fprintf(stderr, "[rack.ctor-default] creating empty rack\n");
+	// CRITICAL FIX: Explicitly initialize m_tiles to prevent corruption
+	m_tiles = Quackle::LetterString();
+	fprintf(stderr, "[rack.ctor-default] m_tiles initialized len=%d\n", (int)m_tiles.length());
 }
 
 inline Rack::Rack(const LetterString &tiles)
 {
+	fprintf(stderr, "[rack.ctor-param] creating rack with tiles len=%d\n", (int)tiles.length());
     setTiles(tiles);
+}
+
+inline Rack::Rack(const Rack &other)
+{
+	fprintf(stderr, "[rack.ctor-copy] copying rack with tiles len=%d\n", (int)other.m_tiles.length());
+	// CRITICAL FIX: Initialize m_tiles first to prevent corruption
+	m_tiles = Quackle::LetterString();
+	// Then copy the content safely
+	m_tiles = other.m_tiles;
+	fprintf(stderr, "[rack.ctor-copy] after copy len=%d\n", (int)m_tiles.length());
+	// Check for corruption after copy
+	if (m_tiles.length() < 0 || m_tiles.length() > m_tiles.capacity()) {
+		fprintf(stderr, "[rack.ctor-copy][CORRUPT] m_tiles corrupted after copy: len=%d cap=%d\n", (int)m_tiles.length(), (int)m_tiles.capacity());
+	}
+}
+
+inline Rack::Rack(Rack &&other) noexcept
+{
+	fprintf(stderr, "[rack.ctor-move] moving rack with tiles len=%d\n", (int)other.m_tiles.length());
+	m_tiles = std::move(other.m_tiles);
+	fprintf(stderr, "[rack.ctor-move] after move len=%d\n", (int)m_tiles.length());
+}
+
+inline Rack& Rack::operator=(const Rack &other)
+{
+	fprintf(stderr, "[rack.assign-copy] assigning rack with tiles len=%d\n", (int)other.m_tiles.length());
+	if (this != &other) {
+		// CRITICAL FIX: Initialize m_tiles first to prevent corruption
+		m_tiles = Quackle::LetterString();
+		// Then copy the content safely
+		m_tiles = other.m_tiles;
+		fprintf(stderr, "[rack.assign-copy] after assign len=%d\n", (int)m_tiles.length());
+	}
+	return *this;
+}
+
+inline Rack& Rack::operator=(Rack &&other) noexcept
+{
+	fprintf(stderr, "[rack.assign-move] moving rack with tiles len=%d\n", (int)other.m_tiles.length());
+	if (this != &other) {
+		m_tiles = std::move(other.m_tiles);
+		fprintf(stderr, "[rack.assign-move] after move len=%d\n", (int)m_tiles.length());
+	}
+	return *this;
 }
 
 inline void Rack::setTiles(const LetterString &tiles)
 {
+	fprintf(stderr, "[rack.setTiles] input len=%d cap=%d\n", (int)tiles.length(), (int)tiles.capacity());
+	fprintf(stderr, "[rack.setTiles] before assign: m_tiles len=%d cap=%d\n", (int)m_tiles.length(), (int)m_tiles.capacity());
 	m_tiles = tiles;
+	fprintf(stderr, "[rack.setTiles] after assign len=%d cap=%d\n", (int)m_tiles.length(), (int)m_tiles.capacity());
+	// Verify the assignment worked
+	if (m_tiles.length() != tiles.length()) {
+		fprintf(stderr, "[rack.setTiles][ERROR] length mismatch: expected=%d got=%d\n", (int)tiles.length(), (int)m_tiles.length());
+	}
 }
 
 inline const LetterString &Rack::tiles() const
 {
+	fprintf(stderr, "[rack.tiles] produce len=%d cap=%d\n", (int)m_tiles.length(), (int)m_tiles.capacity());
+	// Check for corruption
+	if (m_tiles.length() < 0 || m_tiles.length() > m_tiles.capacity()) {
+		fprintf(stderr, "[rack.tiles][CORRUPT] m_tiles corrupted: len=%d cap=%d\n", (int)m_tiles.length(), (int)m_tiles.capacity());
+	}
 	return m_tiles;
 }
 

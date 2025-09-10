@@ -18,6 +18,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 #include <math.h>
 
 #include "datamanager.h"
@@ -1184,6 +1185,16 @@ void Generator::leftpart(const LetterString &partial, int i, int limit,
 
 void Generator::setupCounts(const LetterString &letters)
 {
+	// Log the LetterString being passed to String::counts
+	fprintf(stderr, "[generator_setupCounts] LetterString length=%d\n", (int)letters.length());
+	for (int i = 0; i < std::min((int)letters.length(), 40); ++i) {
+		char c = letters[i];
+		fprintf(stderr, "[generator_setupCounts] letters[%d]='%c' code=%u\n", 
+			i, (c >= 32 && c <= 126) ? c : '?', (unsigned)(unsigned char)c);
+	}
+	
+	// Zero-init count arrays before use
+	memset(m_counts, 0, sizeof(m_counts));
 	String::counts(letters, m_counts);
 }
 
@@ -1638,7 +1649,24 @@ Move Generator::findstaticbest(bool canExchange)
 	best = Move::createPassMove();
 	m_moveList.clear();
 
-	setupCounts(rack().tiles());
+	// Log the rack tiles before setupCounts
+	Quackle::LetterString rackTiles = rack().tiles();
+	fprintf(stderr, "[gen.entry] rack tiles len=%d cap=%d\n",
+		(int)rackTiles.length(), (int)rackTiles.capacity());
+	if (rackTiles.length() < 0 || rackTiles.length() > 30) {
+		fprintf(stderr, "[gen.entry][FATAL] illegal rack length=%d\n", (int)rackTiles.length());
+		abort();
+	}
+	for (int i = 0; i < std::min(10, (int)rackTiles.length()); ++i) {
+		char c = rackTiles[i];
+		fprintf(stderr, "[generator_findstaticbest] rackTiles[%d]='%c' code=%u\n", 
+			i, (c >= 32 && c <= 126) ? c : '?', (unsigned)(unsigned char)c);
+	}
+	if (rackTiles.length() > 10) {
+		fprintf(stderr, "[generator_findstaticbest] ... (showing first 10 of %d)\n", (int)rackTiles.length());
+	}
+
+	setupCounts(rackTiles);
 
 	if (QUACKLE_LEXICON_PARAMETERS->hasSomething())
 	{

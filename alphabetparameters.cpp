@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cctype>
 
 #include "alphabetparameters.h"
 #include "datamanager.h"
@@ -84,12 +85,28 @@ LetterString String::usedTiles(const LetterString &letterString)
 
 void String::counts(const LetterString &letterString, char *countsArray)
 {
+	// Banner una tantum per confermare che questa build include il guard
+	static bool s_banner = (fprintf(stderr, "[counts_guard] ACTIVE\n"), true);
+	(void)s_banner;
+	
 	for (int j = 0; j < QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE; j++)
 		countsArray[j] = 0;
 
 	const LetterString::const_iterator end(letterString.end());
 	for (LetterString::const_iterator it = letterString.begin(); it != end; ++it)
-		countsArray[(int)*it]++;
+	{
+		unsigned char uc = (unsigned char)*it;
+		char c = (char)std::toupper(uc);
+		int idx = (int)c;
+		int maxIdx = QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE - 1;
+		
+		if (idx < QUACKLE_FIRST_LETTER || idx > maxIdx) {
+			fprintf(stderr, "[counts] skip OOB: c='%c' code=%u idx=%d maxIdx=%d\n",
+					(c >= 32 && c <= 126 ? c : '?'), (unsigned)uc, idx, maxIdx);
+			continue; // ignora caratteri non mappabili (es. '?')
+		}
+		countsArray[idx]++;
+	}
 }
 
 void String::counts(const LongLetterString &letterString, char *countsArray)

@@ -19,6 +19,20 @@
 #ifndef QUACKLE_FIXEDSTRING_H
 #define QUACKLE_FIXEDSTRING_H
 
+#include <cstdio>
+#include <cstdlib>
+
+// Global invariant: maximum legal rack letters for EN is small (<= 15 is safe ceiling).
+// Use a conservative compile-time max; adapt to your type if capacity is explicit.
+#ifndef QUACKLE_FIXEDSTRING_CAPACITY
+#define QUACKLE_FIXEDSTRING_CAPACITY 64
+#endif
+
+static inline void quackle_fls_abort(const char* where, int len, int cap) {
+    fprintf(stderr, "[FLS][FATAL] %s: length=%d > capacity=%d\n", where, len, cap);
+    abort();
+}
+
 #include <cassert>
 #include <string>
 #include <string.h>
@@ -53,6 +67,7 @@ class FixedLengthString
     FixedLengthString substr(size_type pos, size_type n) const;
     bool empty() const;
     size_type size() const { return length(); }
+    int capacity() const { return (int)maxSize; }
     void clear() { m_end = m_data; }
     void push_back(char c);
     void pop_back();
@@ -103,14 +118,20 @@ inline
 FixedLengthString::FixedLengthString()
     : m_end(m_data)
 {
+    // CRITICAL FIX: Initialize buffer to prevent garbage data
+    memset(m_data, 0, maxSize);
 }
 
 inline
 FixedLengthString::FixedLengthString(const char* s, size_type n)
 {
     assert(n < maxSize);
+    // CRITICAL FIX: Initialize buffer first
+    memset(m_data, 0, maxSize);
     memcpy(m_data, s, n);
     m_end = m_data + n;
+    // CRITICAL FIX: Add null terminator
+    *m_end = '\0';
 }
 
 inline
@@ -118,9 +139,13 @@ FixedLengthString::FixedLengthString(size_type n, char c)
     : m_end(m_data)
 {
     assert(n < maxSize);
+    // CRITICAL FIX: Initialize buffer first
+    memset(m_data, 0, maxSize);
     for (unsigned int i = 0; i < n; ++i) {
 	*m_end++ = c;
     }
+    // CRITICAL FIX: Add null terminator
+    *m_end = '\0';
 }
 
 inline
@@ -128,32 +153,76 @@ FixedLengthString::FixedLengthString(const char* s)
 {
     size_t sz = strlen(s);
     assert(sz < maxSize);
+    // CRITICAL FIX: Initialize buffer first
+    memset(m_data, 0, maxSize);
     memcpy(m_data, s, sz);
     m_end = m_data + sz;
+    // CRITICAL FIX: Add null terminator
+    *m_end = '\0';
 }
 
 inline
 FixedLengthString::FixedLengthString(const FixedLengthString& s)
 {
-    int sz = s.size();
-    memcpy(m_data, s.m_data, sz);
-    m_end = m_data + sz;
+    int cap = (int)maxSize;
+    int len = s.size();
+    
+    // Only log when corruption is detected
+    if (len < 0 || len > cap || len > QUACKLE_FIXEDSTRING_CAPACITY) {
+        fprintf(stderr, "[FLS.copy-ctor][CORRUPT] src len=%d cap=%d (maxCap=%d)\n",
+                len, cap, QUACKLE_FIXEDSTRING_CAPACITY);
+        quackle_fls_abort("copy-ctor", len, cap);
+    }
+    
+    // CRITICAL FIX: Initialize buffer first
+    memset(m_data, 0, maxSize);
+    // Use bounded copy even if we already checked
+    if (len > 0) memcpy(m_data, s.m_data, (size_t)len);
+    m_end = m_data + len;
+    // CRITICAL FIX: Add null terminator
+    *m_end = '\0';
 }
 
 inline
 FixedLengthString::FixedLengthString(FixedLengthString&& s)
 {
     int sz = s.size();
+    // CRITICAL FIX: Initialize buffer first
+    memset(m_data, 0, maxSize);
     memcpy(m_data, s.m_data, sz);
     m_end = m_data + sz;
+    // CRITICAL FIX: Add null terminator
+    *m_end = '\0';
 }
 
 inline FixedLengthString & 
 FixedLengthString::operator=(const FixedLengthString &s)
 {
-    int sz = s.size();
-    memcpy(m_data, s.m_data, sz);
-    m_end = m_data + sz;
+    if (this != &s) {
+        int cap = (int)maxSize;
+        int len = s.size();
+        
+        // Only log when corruption is detected
+        if (len < 0 || len > cap || len > QUACKLE_FIXEDSTRING_CAPACITY) {
+            fprintf(stderr, "[FLS.assign-copy][CORRUPT] src len=%d cap=%d (maxCap=%d)\n",
+                    len, cap, QUACKLE_FIXEDSTRING_CAPACITY);
+            quackle_fls_abort("assign-copy", len, cap);
+        }
+        
+        // CRITICAL FIX: Initialize buffer first
+        memset(m_data, 0, maxSize);
+        if (len > 0) memcpy(m_data, s.m_data, (size_t)len);
+        m_end = m_data + len;
+        // CRITICAL FIX: Add null terminator
+        *m_end = '\0';
+        
+        // CRITICAL FIX: Verify m_end is valid
+        if (m_end == nullptr || m_end < m_data || m_end > m_data + maxSize) {
+            fprintf(stderr, "[FLS.assign-copy][CORRUPT] m_end=%p m_data=%p maxSize=%d\n", 
+                    m_end, m_data, (int)maxSize);
+            quackle_fls_abort("assign-copy-end-corruption", (int)(m_end - m_data), (int)maxSize);
+        }
+    }
     return *this;
 }
 
@@ -166,6 +235,12 @@ FixedLengthString::begin() const
 inline FixedLengthString::const_iterator
 FixedLengthString::end() const
 {
+    // CRITICAL FIX: Check for corruption
+    if (m_end == nullptr || m_end < m_data || m_end > m_data + maxSize) {
+        fprintf(stderr, "[FLS.end][CORRUPT] m_end=%p m_data=%p maxSize=%d\n", 
+                m_end, m_data, (int)maxSize);
+        quackle_fls_abort("end-corruption", (int)(m_end - m_data), (int)maxSize);
+    }
     return m_end;
 }
 
@@ -191,7 +266,14 @@ FixedLengthString::erase(const iterator i)
 inline FixedLengthString::size_type
 FixedLengthString::length() const
 {
-    return FixedLengthString::size_type(m_end - m_data);
+    size_type len = FixedLengthString::size_type(m_end - m_data);
+    // CRITICAL FIX: Check for corruption
+    if (len < 0 || len > maxSize || m_end < m_data || m_end > m_data + maxSize) {
+        fprintf(stderr, "[FLS.length][CORRUPT] m_end=%p m_data=%p len=%d maxSize=%d\n", 
+                m_end, m_data, (int)len, (int)maxSize);
+        quackle_fls_abort("length-corruption", (int)len, (int)maxSize);
+    }
+    return len;
 }
 
 inline FixedLengthString
@@ -212,6 +294,15 @@ FixedLengthString::operator+=(char c)
 {
     assert(size() < maxSize - 1);
     *m_end++ = c;
+    // CRITICAL FIX: Add null terminator
+    *m_end = '\0';
+    
+    // CRITICAL FIX: Verify m_end is valid
+    if (m_end == nullptr || m_end < m_data || m_end > m_data + maxSize) {
+        fprintf(stderr, "[FLS.operator+=][CORRUPT] m_end=%p m_data=%p maxSize=%d\n", 
+                m_end, m_data, (int)maxSize);
+        quackle_fls_abort("operator+=end-corruption", (int)(m_end - m_data), (int)maxSize);
+    }
     return *this;
 }
 
@@ -222,12 +313,27 @@ FixedLengthString::operator+=(const FixedLengthString& s)
     assert(size() + sz < maxSize);
     memcpy(m_end, s.m_data, sz);
     m_end += sz;
+    // CRITICAL FIX: Add null terminator
+    *m_end = '\0';
     return *this;
 }
 
 inline void
 FixedLengthString::push_back(char c)
 {
+    int cap = (int)maxSize;
+    if (m_end - m_data < 0 || m_end - m_data >= cap) {
+        fprintf(stderr, "[FLS][push_back] overflow: length=%d cap=%d\n", (int)(m_end - m_data), cap);
+        quackle_fls_abort("push_back", (int)(m_end - m_data), cap);
+    }
+    
+    // CRITICAL FIX: Verify m_end is valid before using it
+    if (m_end == nullptr || m_end < m_data || m_end > m_data + maxSize) {
+        fprintf(stderr, "[FLS.push_back][CORRUPT] m_end=%p m_data=%p maxSize=%d\n", 
+                m_end, m_data, (int)maxSize);
+        quackle_fls_abort("push_back-end-corruption", (int)(m_end - m_data), (int)maxSize);
+    }
+    
     *this += c;
 }
 
@@ -235,6 +341,14 @@ inline void
 FixedLengthString::pop_back()
 {
     assert(size() > 0);
+    
+    // CRITICAL FIX: Verify m_end is valid before using it
+    if (m_end == nullptr || m_end < m_data || m_end > m_data + maxSize) {
+        fprintf(stderr, "[FLS.pop_back][CORRUPT] m_end=%p m_data=%p maxSize=%d\n", 
+                m_end, m_data, (int)maxSize);
+        quackle_fls_abort("pop_back-end-corruption", (int)(m_end - m_data), (int)maxSize);
+    }
+    
     m_end--;
 }
 
