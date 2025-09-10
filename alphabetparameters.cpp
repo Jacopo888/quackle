@@ -96,14 +96,14 @@ void String::counts(const LetterString &letterString, char *countsArray)
 	for (LetterString::const_iterator it = letterString.begin(); it != end; ++it)
 	{
 		unsigned char uc = (unsigned char)*it;
-		char c = (char)std::toupper(uc);
-		int idx = (int)c;
-		int maxIdx = QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE - 1;
 		
+		// CRITICAL FIX: LetterString already contains internal letters, not ASCII
+		int idx = (int)uc;
+		
+		int maxIdx = QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE - 1;
 		if (idx < QUACKLE_FIRST_LETTER || idx > maxIdx) {
-			fprintf(stderr, "[counts] skip OOB: c='%c' code=%u idx=%d maxIdx=%d\n",
-					(c >= 32 && c <= 126 ? c : '?'), (unsigned)uc, idx, maxIdx);
-			continue; // ignora caratteri non mappabili (es. '?')
+			fprintf(stderr, "[counts] skip OOB: internal_letter=%d maxIdx=%d\n", idx, maxIdx);
+			continue;
 		}
 		countsArray[idx]++;
 	}

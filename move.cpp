@@ -431,7 +431,15 @@ bool MoveList::wordPosComparator(const Move &move1, const Move &move2)
 		return move1.effectiveScore() < move2.effectiveScore();
 	}
 
-	assert(move1.tiles() != move2.tiles());
+	// Handle duplicate moves gracefully instead of asserting
+	if (move1.tiles() == move2.tiles()) {
+		// If tiles are identical, use position as tiebreaker
+		if (move1.startrow != move2.startrow) {
+			return move1.startrow < move2.startrow;
+		}
+		return move1.startcol < move2.startcol;
+	}
+	
 	return move1.tiles() < move2.tiles();
 }
 
