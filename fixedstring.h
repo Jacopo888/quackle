@@ -209,12 +209,17 @@ FixedLengthString::operator=(const FixedLengthString &s)
             quackle_fls_abort("assign-copy", len, cap);
         }
         
-        // CRITICAL FIX: Initialize buffer first
-        memset(m_data, 0, maxSize);
-        if (len > 0) memcpy(m_data, s.m_data, (size_t)len);
+                    // CRITICAL FIX: Initialize buffer first
+                    fprintf(stderr, "[FLS.assign-copy] memset m_data=%p size=%d\n", m_data, (int)maxSize);
+                    memset(m_data, 0, maxSize);
+                    if (len > 0) {
+                        fprintf(stderr, "[FLS.assign-copy] memcpy src=%p dst=%p size=%d\n", s.m_data, m_data, (int)len);
+                        memcpy(m_data, s.m_data, (size_t)len);
+                    }
         m_end = m_data + len;
         // CRITICAL FIX: Add null terminator
         *m_end = '\0';
+        fprintf(stderr, "[FLS.assign-copy] m_end set to %p (m_data=%p + %d)\n", m_end, m_data, (int)len);
         
         // CRITICAL FIX: Verify m_end is valid
         if (m_end == nullptr || m_end < m_data || m_end > m_data + maxSize) {

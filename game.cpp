@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <iterator>
 
 #include "computerplayer.h"
 #include "datamanager.h"
@@ -195,21 +196,81 @@ GamePosition::GamePosition(const PlayerList &players)
 GamePosition::GamePosition(const GamePosition &position)
 	: m_players(position.m_players), m_moves(position.m_moves), m_moveMade(position.m_moveMade), m_committedMove(position.m_committedMove), m_turnNumber(position.m_turnNumber), m_nestedness(position.m_nestedness), m_scorelessTurnsInARow(position.m_scorelessTurnsInARow), m_gameOver(position.m_gameOver), m_tilesInBag(position.m_tilesInBag), m_tilesOnRack(position.m_tilesOnRack), m_board(position.m_board), m_bag(position.m_bag), m_drawingOrder(position.m_drawingOrder), m_explanatoryNote(position.m_explanatoryNote)
 {
-	// reset iterator
-	if (position.turnNumber() == 0)
-	{
-		m_currentPlayer = m_players.end();
-		m_playerOnTurn = m_players.end();
+	// CRITICAL FIX: Preserve current player by index instead of resetting to end()
+	// Calculate source current player index
+	int src_idx = -1;
+	if (!position.m_players.empty() && position.m_currentPlayer != position.m_players.end()) {
+		// Calculate index manually to avoid iterator type mismatch
+		for (auto it = position.m_players.begin(); it != position.m_players.end(); ++it) {
+			if (it == position.m_currentPlayer) {
+				src_idx = static_cast<int>(it - position.m_players.begin());
+				break;
+			}
+		}
 	}
-	else
-	{
-		setCurrentPlayer(position.currentPlayer().id());
-		setPlayerOnTurn(position.currentPlayer().id());
+	
+	// Rebuild current player iterator by index
+	if (!m_players.empty()) {
+		if (src_idx >= 0 && src_idx < static_cast<int>(m_players.size())) {
+			m_currentPlayer = m_players.begin() + src_idx;
+		} else {
+			// Fallback: default to first player if source had end() or out-of-range
+			m_currentPlayer = m_players.begin();
+		}
+	} else {
+		m_currentPlayer = m_players.end();
+	}
+	
+	// Do the same for playerOnTurn
+	int src_playerOnTurn_idx = -1;
+	if (!position.m_players.empty() && position.m_playerOnTurn != position.m_players.end()) {
+		// Calculate index manually to avoid iterator type mismatch
+		for (auto it = position.m_players.begin(); it != position.m_players.end(); ++it) {
+			if (it == position.m_playerOnTurn) {
+				src_playerOnTurn_idx = static_cast<int>(it - position.m_players.begin());
+				break;
+			}
+		}
+	}
+	
+	if (!m_players.empty()) {
+		if (src_playerOnTurn_idx >= 0 && src_playerOnTurn_idx < static_cast<int>(m_players.size())) {
+			m_playerOnTurn = m_players.begin() + src_playerOnTurn_idx;
+		} else {
+			// Fallback: default to first player if source had end() or out-of-range
+			m_playerOnTurn = m_players.begin();
+		}
+	} else {
+		m_playerOnTurn = m_players.end();
 	}
 }
 
 const GamePosition &GamePosition::operator=(const GamePosition &position)
 {
+	// CRITICAL FIX: Calculate source current player index BEFORE copying players
+	int src_idx = -1;
+	if (!position.m_players.empty() && position.m_currentPlayer != position.m_players.end()) {
+		// Calculate index manually to avoid iterator type mismatch
+		for (auto it = position.m_players.begin(); it != position.m_players.end(); ++it) {
+			if (it == position.m_currentPlayer) {
+				src_idx = static_cast<int>(it - position.m_players.begin());
+				break;
+			}
+		}
+	}
+	
+	int src_playerOnTurn_idx = -1;
+	if (!position.m_players.empty() && position.m_playerOnTurn != position.m_players.end()) {
+		// Calculate index manually to avoid iterator type mismatch
+		for (auto it = position.m_players.begin(); it != position.m_players.end(); ++it) {
+			if (it == position.m_playerOnTurn) {
+				src_playerOnTurn_idx = static_cast<int>(it - position.m_players.begin());
+				break;
+			}
+		}
+	}
+	
+	// Copy all fields
 	m_players = position.m_players;
 	m_moves = position.m_moves;
 	m_moveMade = position.m_moveMade;
@@ -225,17 +286,30 @@ const GamePosition &GamePosition::operator=(const GamePosition &position)
 	m_drawingOrder = position.m_drawingOrder;
 	m_explanatoryNote = position.m_explanatoryNote;
 
-	// reset iterator
-	if (position.turnNumber() == 0)
-	{
+	// CRITICAL FIX: Rebuild current player iterator by index instead of resetting to end()
+	if (!m_players.empty()) {
+		if (src_idx >= 0 && src_idx < static_cast<int>(m_players.size())) {
+			m_currentPlayer = m_players.begin() + src_idx;
+		} else {
+			// Fallback: default to first player if source had end() or out-of-range
+			m_currentPlayer = m_players.begin();
+		}
+	} else {
 		m_currentPlayer = m_players.end();
+	}
+	
+	// Do the same for playerOnTurn
+	if (!m_players.empty()) {
+		if (src_playerOnTurn_idx >= 0 && src_playerOnTurn_idx < static_cast<int>(m_players.size())) {
+			m_playerOnTurn = m_players.begin() + src_playerOnTurn_idx;
+		} else {
+			// Fallback: default to first player if source had end() or out-of-range
+			m_playerOnTurn = m_players.begin();
+		}
+	} else {
 		m_playerOnTurn = m_players.end();
 	}
-	else
-	{
-		setCurrentPlayer(position.currentPlayer().id());
-		setPlayerOnTurn(position.currentPlayer().id());
-	}
+	
 	return *this;
 }
 
