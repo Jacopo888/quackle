@@ -76,3 +76,8 @@ add_library(libquackle
 )
 
 target_link_libraries(libquackle Threads::Threads)
+
+# Smoke test executable (optional, for quick local validation)
+add_executable(quackle_smoke smoke/smoke.cpp)
+target_link_libraries(quackle_smoke libquackle Threads::Threads)
+target_include_directories(quackle_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

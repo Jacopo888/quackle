@@ -30,6 +30,19 @@ The Quackle cmake build system uses Qt5 by default.  But you can specify Qt6 by 
 	cmake -DQT_VERSION=6 ..
 
 
+Generating Lexicons (optional):
+-------------------------------
+- Build the helper tools with qmake (requires Qt):
+  - makegaddag: qmake makegaddag.pro && make -j
+  - makeminidawg: qmake makeminidawg.pro && make -j
+
+- Generate a GADDAG from a word list (e.g., enable1.txt):
+  - scripts/gen_gaddag.sh data/lexicons/enable1.txt enable1.gaddag english
+
+- DAWG generation (makeminidawg) requires inputs dawginput.raw, smaller.raw, and playabilities.raw.
+  See makeminidawg/README for details.
+
+
 File organization:
 ------------------
 * quackle/ - libquackle sources.  libquackle is the engine, and can be linked to any convenient interface.  It does not use Qt.

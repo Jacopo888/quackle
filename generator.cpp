@@ -1183,22 +1183,30 @@ void Generator::leftpart(const LetterString &partial, int i, int limit,
 	} 
 }
 
-void Generator::setupCounts(const LetterString & /*letters*/)
+void Generator::setupCounts(const LetterString &letters)
 {
-    // Azzeramento sicuro
+    // Reset counts
     for (int j = 0; j < QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE; ++j)
         m_counts[j] = 0;
 
-    // Conta i 7 slot della rack del giocatore corrente (evita iteratori su FLS)
-    const FixedLengthString &rk = m_position.currentPlayer().rack().tiles();
-    int n = static_cast<int>(rk.length());
-    if (n > 7) n = 7;
-
+    // Count the provided letters (do not read rack from position)
     const int cap = QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE;
+    const int maxIdx = cap - 1;
+    const int minIdx = QUACKLE_FIRST_LETTER;
+
+    int n = static_cast<int>(letters.length());
     for (int i = 0; i < n; ++i) {
-        int idx = static_cast<int>(static_cast<unsigned char>(rk[i]));
-        if (idx >= 0 && idx < cap) {
-            m_counts[idx]++;
+        int v = static_cast<int>(static_cast<unsigned char>(letters[i]));
+
+        // Count blanks explicitly
+        if (v == QUACKLE_BLANK_MARK) {
+            m_counts[v]++;
+            continue;
+        }
+
+        // Count plain letters in the valid range
+        if (v >= minIdx && v <= maxIdx) {
+            m_counts[v]++;
         }
     }
 }

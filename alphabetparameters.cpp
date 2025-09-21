@@ -85,10 +85,10 @@ LetterString String::usedTiles(const LetterString &letterString)
 
 void String::counts(const LetterString &letterString, char *countsArray)
 {
-	// Banner una tantum per confermare che questa build include il guard
+	// One-time banner retained for debugging visibility
 	static bool s_banner = (fprintf(stderr, "[counts_guard] ACTIVE\n"), true);
 	(void)s_banner;
-	
+
 	for (int j = 0; j < QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE; j++)
 		countsArray[j] = 0;
 
@@ -96,10 +96,14 @@ void String::counts(const LetterString &letterString, char *countsArray)
 	for (LetterString::const_iterator it = letterString.begin(); it != end; ++it)
 	{
 		unsigned char uc = (unsigned char)*it;
-		
-		// CRITICAL FIX: LetterString already contains internal letters, not ASCII
 		int idx = (int)uc;
-		
+
+		// Count blank mark as a valid tile
+		if (idx == QUACKLE_BLANK_MARK) {
+			countsArray[idx]++;
+			continue;
+		}
+
 		int maxIdx = QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE - 1;
 		if (idx < QUACKLE_FIRST_LETTER || idx > maxIdx) {
 			fprintf(stderr, "[counts] skip OOB: internal_letter=%d maxIdx=%d\n", idx, maxIdx);
@@ -362,4 +366,3 @@ UVOStream &operator<<(UVOStream& o, const Quackle::Alphabet &alphabet)
 		o << (*it) << " ";
 	return o;
 }
-
