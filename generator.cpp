@@ -1183,21 +1183,22 @@ void Generator::leftpart(const LetterString &partial, int i, int limit,
 	} 
 }
 
-void Generator::setupCounts(const LetterString & /*letters*/) {
-    // Azzeramento sicuro del vettore m_counts
-    for (int j = 0; j < QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE; ++j) {
+void Generator::setupCounts(const LetterString & /*letters*/)
+{
+    // Azzeramento sicuro
+    for (int j = 0; j < QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE; ++j)
         m_counts[j] = 0;
-    }
 
-    // Conta esplicita sui 7 slot della rack del giocatore corrente
-    const FixedLengthString &rk = m_position.rack().tiles(); // FLS interno di Quackle
-    int n = (int)rk.length();
-    if (n > 7) n = 7; // rack massima
+    // Conta i 7 slot della rack del giocatore corrente (evita iteratori su FLS)
+    const FixedLengthString &rk = m_position.currentPlayer().rack().tiles();
+    int n = static_cast<int>(rk.length());
+    if (n > 7) n = 7;
 
+    const int cap = QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE;
     for (int i = 0; i < n; ++i) {
-        int v = (unsigned char) rk[i];
-        if (v >= 0 && v < (QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE)) {
-            m_counts[v]++;
+        int idx = static_cast<int>(static_cast<unsigned char>(rk[i]));
+        if (idx >= 0 && idx < cap) {
+            m_counts[idx]++;
         }
     }
 }
@@ -1902,4 +1903,3 @@ void Generator::storeExtensions(WordWithInfo *wordWithInfo)
 {
 	// TODO(olaugh)
 }
-
