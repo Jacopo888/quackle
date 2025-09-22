@@ -172,7 +172,9 @@ void LexiconParameters::loadDawg(const string &filename)
 	if (!file.is_open())
 	{
 		UVcout << "couldn't open dawg " << filename.c_str() << endl;
-		return;
+		// Fail-fast if DAWG cannot be loaded
+		cerr << "[CONFIG] lexicon not ready: DAWG file not found: " << filename << endl;
+		std::_Exit(72);
 	}
 
 	char versionByte = file.get();
@@ -180,7 +182,9 @@ void LexiconParameters::loadDawg(const string &filename)
 	if (m_interpreter == NULL)
 	{
 		UVcout << "couldn't open file " << filename.c_str() << endl;
-		return;
+		// Fail-fast if DAWG cannot be interpreted
+		cerr << "[CONFIG] lexicon not ready: DAWG file corrupted: " << filename << endl;
+		std::_Exit(72);
 	}
 
 	file.seekg(0, ios_base::end);
@@ -188,6 +192,12 @@ void LexiconParameters::loadDawg(const string &filename)
 	file.seekg(0, ios_base::beg);
 
 	m_interpreter->loadDawg(file, *this);
+	
+	// Fail-fast if DAWG is not available after loading
+	if (!hasDawg()) {
+		cerr << "[CONFIG] lexicon not ready: DAWG not available after loading" << endl;
+		std::_Exit(72);
+	}
 }
 
 void LexiconParameters::loadGaddag(const string &filename)
@@ -199,14 +209,19 @@ void LexiconParameters::loadGaddag(const string &filename)
 	{
 		UVcout << "couldn't open gaddag " << filename.c_str() << endl;
 		UVcout << "Performance without gaddag won't be quite so awesome." << endl;
-		return;
+		// Fail-fast if GADDAG cannot be loaded
+		cerr << "[CONFIG] lexicon not ready: GADDAG file not found: " << filename << endl;
+		std::_Exit(72);
 	}
 
 	char versionByte = file.get();
 	// Guard against null m_interpreter when loading GADDAG without a DAWG
 	if (m_interpreter != NULL) {
 		if (versionByte < m_interpreter->versionNumber())
-			return;
+		{
+			cerr << "[CONFIG] lexicon not ready: GADDAG version mismatch" << endl;
+			std::_Exit(72);
+		}
 	}
 	file.seekg(0, ios_base::end);
 	m_gaddag = new unsigned char[file.tellg()];
@@ -220,7 +235,17 @@ void LexiconParameters::loadGaddag(const string &filename)
 		delete interpreter;
 	}
 	else
+	{
 		unloadGaddag();
+		cerr << "[CONFIG] lexicon not ready: GADDAG file corrupted: " << filename << endl;
+		std::_Exit(72);
+	}
+	
+	// Fail-fast if GADDAG is not available after loading
+	if (!hasGaddag()) {
+		cerr << "[CONFIG] lexicon not ready: GADDAG not available after loading" << endl;
+		std::_Exit(72);
+	}
 }
 
 string LexiconParameters::findDictionaryFile(const string &lexicon)

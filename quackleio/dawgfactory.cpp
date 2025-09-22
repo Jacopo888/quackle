@@ -30,7 +30,7 @@ using namespace std;
 
 DawgFactory::DawgFactory(const QString &alphabetFile)
 	: m_encodableWords(0), m_unencodableWords(0), m_duplicateWords(0),
-	m_countsByLength(Quackle::FixedLengthString::maxSize, 0)
+        m_countsByLength(Quackle::FixedLengthString::MAX_SIZE, 0)
 {
 	QuackleIO::FlexibleAlphabetParameters *flexure = new QuackleIO::FlexibleAlphabetParameters;
 	flexure->load(alphabetFile);

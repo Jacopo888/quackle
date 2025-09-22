@@ -43,6 +43,17 @@ void StrategyParameters::initialize(const string &lexicon)
 	m_hasVcPlace = loadVcPlace(DataManager::self()->findDataFile("strategy", lexicon, "vcplace"));
 	m_hasBogowin = loadBogowin(DataManager::self()->findDataFile("strategy", lexicon, "bogowin"));
 	m_hasSuperleaves = loadSuperleaves(DataManager::self()->findDataFile("strategy", lexicon, "superleaves")); 	
+	
+	// Fail-fast validation after strategy initialization
+	if (!m_hasSyn2 || !m_hasVcPlace || !m_hasSuperleaves || !m_hasWorths || !m_hasBogowin) {
+		cerr << "[CONFIG] Strategy candidate missing: " << lexicon << endl;
+		cerr << "  hasSyn2: " << (m_hasSyn2 ? "YES" : "NO") << endl;
+		cerr << "  hasVcPlace: " << (m_hasVcPlace ? "YES" : "NO") << endl;
+		cerr << "  hasSuperleaves: " << (m_hasSuperleaves ? "YES" : "NO") << endl;
+		cerr << "  hasWorths: " << (m_hasWorths ? "YES" : "NO") << endl;
+		cerr << "  hasBogowin: " << (m_hasBogowin ? "YES" : "NO") << endl;
+		std::_Exit(72);
+	}
 }
 
 bool StrategyParameters::loadSyn2(const string &filename)

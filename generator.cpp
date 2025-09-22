@@ -1183,6 +1183,7 @@ void Generator::leftpart(const LetterString &partial, int i, int limit,
 	} 
 }
 
+
 void Generator::setupCounts(const LetterString &letters)
 {
     // Reset counts
@@ -1210,6 +1211,7 @@ void Generator::setupCounts(const LetterString &letters)
         }
     }
 }
+
 
 
 double Generator::equity(const Move &move) const

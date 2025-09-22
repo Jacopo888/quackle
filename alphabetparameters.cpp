@@ -89,14 +89,23 @@ void String::counts(const LetterString &letterString, char *countsArray)
 	static bool s_banner = (fprintf(stderr, "[counts_guard] ACTIVE\n"), true);
 	(void)s_banner;
 
+	// Guard against pathological input
+	if (letterString.length() < 0 || letterString.length() > 15) {
+		// 15 = max tiles on rack; avoid any pathological loop
+		fprintf(stderr, "[counts] LetterString length out of bounds: %d\n", (int)letterString.length());
+		for (int j = 0; j < QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE; j++)
+			countsArray[j] = 0;
+		return;
+	}
+
 	for (int j = 0; j < QUACKLE_FIRST_LETTER + QUACKLE_MAXIMUM_ALPHABET_SIZE; j++)
 		countsArray[j] = 0;
 
-	const LetterString::const_iterator end(letterString.end());
-	for (LetterString::const_iterator it = letterString.begin(); it != end; ++it)
-	{
-		unsigned char uc = (unsigned char)*it;
-		int idx = (int)uc;
+	// Iterate by index instead of using iterators to avoid UB
+	int n = static_cast<int>(letterString.length());
+	for (int i = 0; i < n; ++i) {
+		unsigned char uc = static_cast<unsigned char>(letterString[i]);
+		int idx = static_cast<int>(uc);
 
 		// Count blank mark as a valid tile
 		if (idx == QUACKLE_BLANK_MARK) {
@@ -122,6 +131,7 @@ void String::counts(const LongLetterString &letterString, char *countsArray)
 	for (LongLetterString::const_iterator it = letterString.begin(); it != end; ++it)
 		countsArray[(int)*it]++;
 }
+
 
 ////////////
 

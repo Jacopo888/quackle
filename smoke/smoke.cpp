@@ -13,21 +13,26 @@ using std::endl;
 
 static bool ensureLexicon()
 {
-    // Prefer TWL06; fall back to any available DAWG present in data/lexica
-    std::string dawg = LexiconParameters::findDictionaryFile("twl06.dawg");
+    // Prefer enable1.gaddag (to avoid DAWG/GADDAG hash mismatch); fall back to well-known DAWGs
+    std::string gaddag = LexiconParameters::findDictionaryFile("enable1.gaddag");
+    cout << "Looking for enable1.gaddag: " << gaddag << endl;
+    if (!gaddag.empty()) {
+        QUACKLE_LEXICON_PARAMETERS->loadGaddag(gaddag);
+        cout << "GADDAG loaded: " << (QUACKLE_LEXICON_PARAMETERS->hasGaddag() ? "YES" : "NO") << endl;
+        if (QUACKLE_LEXICON_PARAMETERS->hasGaddag()) return true;
+    }
+
+    // Fall back to DAWGs
+    std::string dawg = LexiconParameters::findDictionaryFile("enable1.dawg");
+    cout << "Looking for enable1.dawg: " << dawg << endl;
+    if (dawg.empty()) dawg = LexiconParameters::findDictionaryFile("twl06.dawg");
     if (dawg.empty()) dawg = LexiconParameters::findDictionaryFile("nwl18.dawg");
     if (dawg.empty()) dawg = LexiconParameters::findDictionaryFile("csw19.dawg");
     if (dawg.empty()) dawg = LexiconParameters::findDictionaryFile("csw15.dawg");
     if (dawg.empty()) return false;
-
     QUACKLE_LEXICON_PARAMETERS->loadDawg(dawg);
-    // Optional: try to load a matching gaddag if present
-    std::string gaddag = LexiconParameters::findDictionaryFile(
-        dawg.substr(dawg.find_last_of('/') + 1).substr(0, dawg.find_last_of('.') - dawg.find_last_of('/')) + ".gaddag");
-    if (!gaddag.empty()) {
-        QUACKLE_LEXICON_PARAMETERS->loadGaddag(gaddag);
-    }
-    return QUACKLE_LEXICON_PARAMETERS->hasSomething();
+    cout << "DAWG loaded: " << (QUACKLE_LEXICON_PARAMETERS->hasDawg() ? "YES" : "NO") << endl;
+    return QUACKLE_LEXICON_PARAMETERS->hasDawg();
 }
 
 int main()
@@ -35,6 +40,9 @@ int main()
     DataManager dm;
     dm.setAppDataDirectory("data");
     dm.setBoardParameters(new EnglishBoard());
+
+    cout << "Alphabet: " << QUACKLE_ALPHABET_PARAMETERS->alphabetName() << endl;
+    cout << "Alphabet size: " << QUACKLE_ALPHABET_PARAMETERS->length() << endl;
 
     if (!ensureLexicon()) {
         std::cerr << "No DAWG lexicon found under data/lexica.\n";
@@ -52,6 +60,18 @@ int main()
     // Test 1: Empty board + AEIRSTZ
     game.currentPosition().setEmptyBoard();
     game.currentPosition().setCurrentPlayerRack(Rack(QUACKLE_ALPHABET_PARAMETERS->encode(MARK_UV("AEIRSTZ"))));
+    cout << "Test1 rack: " << game.currentPosition().currentPlayer().rack() << endl;
+    cout << "Test1 board empty: " << (game.currentPosition().board().isEmpty() ? "YES" : "NO") << endl;
+    
+    // Test DAWG reading
+    cout << "Testing DAWG reading:" << endl;
+    unsigned int p;
+    Letter letter;
+    bool t, lastchild, british;
+    int playability;
+    QUACKLE_LEXICON_PARAMETERS->dawgAt(1, p, letter, t, lastchild, british, playability);
+    cout << "  DAWG root: p=" << p << " letter=" << (int)letter << " t=" << t << " lastchild=" << lastchild << endl;
+    
     game.currentPosition().kibitz(10);
     const MoveList &moves1 = game.currentPosition().moves();
     bool hasPlace1 = false;
@@ -81,4 +101,3 @@ int main()
 
     return (hasPlace1 && hasPlace2) ? 0 : 1;
 }
-
