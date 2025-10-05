@@ -1688,7 +1688,68 @@ Move Generator::findstaticbest(bool canExchange)
 	{
 		if (board().isEmpty())
 		{
+			// Opening move generation must always traverse the center square.
+			// Use classic anagram() enumeration (horizontal placements across the star)
+			// then defensively eliminate any move that (due to future regressions or
+			// unconventional board parameters) does not actually include the start square.
 			anagram();
+			int centerRow = QUACKLE_BOARD_PARAMETERS->startRow();
+			int centerCol = QUACKLE_BOARD_PARAMETERS->startColumn();
+			// Filter moveList and adjust 'best' if necessary
+			bool bestHitsCenter = false;
+			for (const auto &t : best.tiles()) {
+				// best.tiles() is the letter string; need to infer placement cell-by-cell
+				// We'll recompute whether best crosses center via its start + orientation.
+				// (Loop body intentionally empty; detection below done once)
+				(void)t; // silence unused variable warning for compilers without NDEBUG
+			}
+			{
+				// Determine if current best covers center
+				if (best.action == Move::Place) {
+					int len = (int)best.tiles().length();
+					if (best.horizontal) {
+						if (centerRow == best.startrow && centerCol >= best.startcol && centerCol < best.startcol + len) {
+							bestHitsCenter = true;
+						}
+					} else {
+						if (centerCol == best.startcol && centerRow >= best.startrow && centerRow < best.startrow + len) {
+							bestHitsCenter = true;
+						}
+					}
+				}
+			}
+
+			// Prune any non‑center moves from the full list
+			for (auto it = m_moveList.begin(); it != m_moveList.end(); ) {
+				bool hits = false;
+				if (it->action == Move::Place) {
+					int len = (int)it->tiles().length();
+					if (it->horizontal) {
+						if (centerRow == it->startrow && centerCol >= it->startcol && centerCol < it->startcol + len) hits = true;
+					} else {
+						if (centerCol == it->startcol && centerRow >= it->startrow && centerRow < it->startrow + len) hits = true;
+					}
+				}
+				if (!hits) {
+					it = m_moveList.erase(it);
+				} else {
+					++it;
+				}
+			}
+
+			// If previous best was off‑center (should not normally happen), select a new best among remaining moves.
+			if (!bestHitsCenter) {
+				if (!m_moveList.empty()) {
+					best = m_moveList.front();
+					for (const auto &mv : m_moveList) {
+						if (MoveList::equityComparator(best, mv)) best = mv;
+					}
+				} else {
+					// As absolute fallback (should be unreachable): create a pass (still center enforcement failed)
+					// but this indicates a deeper issue in anagram logic relative to board params.
+					best = Move::createPassMove();
+				}
+			}
 		}
 		else
 		{
