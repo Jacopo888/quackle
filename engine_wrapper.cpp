@@ -163,8 +163,33 @@ public:
             moves.resize(maxMoves);
         }
         
-        // Prendi la mossa migliore
-        const Move& bestMove = moves[0];
+        // Determina se è la primissima mossa (board vuota prima di giocare)
+        bool opening = board.empty();
+
+        // Helper: verifica se una mossa piazza almeno una tessera sul centro (7,7) 0-based
+        auto touchesCenter = [](const Move& m) -> bool {
+            if (m.action != Move::Place) return false;
+            const int CENTER = 7; // 15x15 board -> index 7
+            if (m.horizontal) {
+                if (m.startrow != CENTER) return false;
+                int endc = m.startcol + static_cast<int>(m.tiles().length()) - 1;
+                return m.startcol <= CENTER && endc >= CENTER;
+            } else {
+                if (m.startcol != CENTER) return false;
+                int endr = m.startrow + static_cast<int>(m.tiles().length()) - 1;
+                return m.startrow <= CENTER && endr >= CENTER;
+            }
+        };
+
+        // Se apertura: scegli la prima mossa (dopo ordinamento per equity) che tocca il centro; fallback alla migliore assoluta se nessuna
+        const Move* chosen = &moves[0];
+        if (opening) {
+            for (const auto& m : moves) {
+                if (touchesCenter(m)) { chosen = &m; break; }
+            }
+        }
+
+        const Move& bestMove = *chosen;
         
         if (bestMove.action == Move::Place) {
             result.move_type = "play";
@@ -192,7 +217,11 @@ public:
             result.explanation = "Pass";
         }
         
-        cout << "✅ Generated move: " << result.explanation << endl;
+        cout << "✅ Generated move: " << result.explanation;
+        if (opening && !touchesCenter(bestMove)) {
+            cout << " (WARNING: opening move does not touch center - no alternative found)";
+        }
+        cout << endl;
         return result;
     }
     

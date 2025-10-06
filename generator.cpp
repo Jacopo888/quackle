@@ -1889,6 +1889,10 @@ Move Generator::anagram()
 	// UVcout << "m_spat has " << m_spat.size() << " words in it" << endl;
 
 	WordList::const_iterator end = m_spat.end();
+	// DEBUG: log center coordinates used for opening generation
+	fprintf(stderr, "[DEBUG][anagram] center row=%d col=%d width=%d height=%d words=%zu\n",
+	        QUACKLE_BOARD_PARAMETERS->startRow(), QUACKLE_BOARD_PARAMETERS->startColumn(),
+	        board().width(), board().height(), (size_t)m_spat.size());
 	for (WordList::const_iterator it = m_spat.begin(); it != end; ++it)
 	{
 		for (unsigned int k = 0; k < (*it).length(); k++)
@@ -1899,6 +1903,9 @@ Move Generator::anagram()
 			move.horizontal = true;
 			move.startrow = QUACKLE_BOARD_PARAMETERS->startRow();
 			move.startcol = (QUACKLE_BOARD_PARAMETERS->startColumn() - (*it).length() + 1) + k;
+			fprintf(stderr, "[DEBUG][anagram] candidate word=%s k=%u startrow=%d startcol=%d len=%u centerRow=%d centerCol=%d\n",
+			        QUACKLE_ALPHABET_PARAMETERS->userVisible(*it).c_str(), k, move.startrow, move.startcol,
+			        (unsigned)(*it).length(), QUACKLE_BOARD_PARAMETERS->startRow(), QUACKLE_BOARD_PARAMETERS->startColumn());
 
 			if (move.startcol < 0)
 				continue;
